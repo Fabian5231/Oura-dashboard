@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Database
+oura.db
+
+# Environment
+.env
+
+# Data (fetched from API at runtime)
+oura_data/
+
+# Legacy static dashboard
+oura_dashboard.html
+
+# IDE / Tools
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+*.png
+*.jpg

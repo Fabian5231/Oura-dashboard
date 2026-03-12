@@ -417,6 +417,56 @@ def get_date_range() -> dict:
     return {"min_day": None, "max_day": None}
 
 
+def get_overview() -> dict:
+    """Return first/last entry and record count for each main table."""
+    conn = get_conn()
+    tables = {
+        "Readiness": "daily_readiness",
+        "Schlaf": "daily_sleep",
+        "Aktivität": "daily_activity",
+        "Stress": "daily_stress",
+        "SpO2": "daily_spo2",
+        "Kardio-Alter": "daily_cardiovascular_age",
+        "Schlaf-Detail": "sleep",
+        "Herzfrequenz": "heartrate",
+    }
+    categories = []
+    for label, table in tables.items():
+        if table == "heartrate":
+            row = conn.execute(
+                "SELECT MIN(substr(timestamp,1,10)) as first_day, MAX(substr(timestamp,1,10)) as last_day, COUNT(*) as count FROM heartrate"
+            ).fetchone()
+        else:
+            row = conn.execute(
+                f"SELECT MIN(day) as first_day, MAX(day) as last_day, COUNT(*) as count FROM {table}"
+            ).fetchone()
+        if row and row["first_day"]:
+            categories.append({
+                "label": label,
+                "first_day": row["first_day"],
+                "last_day": row["last_day"],
+                "count": row["count"],
+            })
+    conn.close()
+
+    # Overall range
+    overall_first = min((c["first_day"] for c in categories), default=None)
+    overall_last = max((c["last_day"] for c in categories), default=None)
+    total_days = 0
+    if overall_first and overall_last:
+        from datetime import datetime
+        d1 = datetime.strptime(overall_first, "%Y-%m-%d")
+        d2 = datetime.strptime(overall_last, "%Y-%m-%d")
+        total_days = (d2 - d1).days + 1
+
+    return {
+        "overall_first": overall_first,
+        "overall_last": overall_last,
+        "total_days": total_days,
+        "categories": categories,
+    }
+
+
 def get_latest_day(table: str) -> str | None:
     """Get the most recent day value from a given table."""
     conn = get_conn()

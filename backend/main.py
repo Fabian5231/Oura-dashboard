@@ -93,6 +93,11 @@ async def date_range():
     return db.get_date_range()
 
 
+@app.get("/api/overview")
+async def overview():
+    return db.get_overview()
+
+
 @app.get("/api/scores")
 async def scores(
     start: str | None = Query(None),
@@ -193,6 +198,26 @@ async def trigger_sync(background_tasks: BackgroundTasks):
     if _sync_running:
         return {"status": "already_running"}
     background_tasks.add_task(_background_sync)
+    return {"status": "started"}
+
+
+@app.post("/api/sync/full")
+async def trigger_full_sync(background_tasks: BackgroundTasks):
+    global _sync_running
+    if _sync_running:
+        return {"status": "already_running"}
+
+    def _bg():
+        global _sync_running
+        _sync_running = True
+        try:
+            print("Starting FULL sync...")
+            result = oura_sync.run_full_sync()
+            print(f"Full sync finished: {result}")
+        finally:
+            _sync_running = False
+
+    background_tasks.add_task(_bg)
     return {"status": "started"}
 
 

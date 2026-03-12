@@ -86,8 +86,57 @@ def _compute_start_date(endpoint_name: str) -> str:
             dt = datetime.strptime(latest, "%Y-%m-%d") - timedelta(days=3)
             return dt.strftime("%Y-%m-%d")
 
-    # First sync: 365 days back
-    return (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+    # First sync: fetch all available history (5 years back)
+    return (datetime.now() - timedelta(days=1825)).strftime("%Y-%m-%d")
+
+
+def run_full_sync() -> dict:
+    """Force a full historical sync (ignores existing data range)."""
+    if not TOKEN:
+        return {"status": "error", "error": "OURA_TOKEN not set"}
+
+    started = datetime.now().isoformat()
+    total_records = 0
+    start_date = (datetime.now() - timedelta(days=1825)).strftime("%Y-%m-%d")
+    end_date = datetime.now().strftime("%Y-%m-%d")
+
+    conn = db.get_conn()
+    cur = conn.execute(
+        "INSERT INTO sync_log (started_at, status) VALUES (?, 'running')", (started,))
+    log_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+
+    try:
+        resp = requests.get(f"{BASE_URL}/personal_info", headers=_headers(), timeout=30)
+        if resp.status_code == 200:
+            db.upsert_personal_info(resp.json())
+            total_records += 1
+
+        for ep in SYNC_ENDPOINTS:
+            print(f"  [FULL] Syncing {ep['name']} from {start_date}...")
+            records = _fetch_paginated(ep, start_date, end_date)
+            if records:
+                UPSERT_MAP[ep["name"]](records)
+                total_records += len(records)
+                print(f"    -> {len(records)} records")
+
+        conn = db.get_conn()
+        conn.execute(
+            "UPDATE sync_log SET finished_at=?, status='success', records_synced=? WHERE id=?",
+            (datetime.now().isoformat(), total_records, log_id))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "records_synced": total_records}
+
+    except Exception as e:
+        conn = db.get_conn()
+        conn.execute(
+            "UPDATE sync_log SET finished_at=?, status='error', error_message=? WHERE id=?",
+            (datetime.now().isoformat(), str(e), log_id))
+        conn.commit()
+        conn.close()
+        return {"status": "error", "error": str(e)}
 
 
 def run_sync() -> dict:

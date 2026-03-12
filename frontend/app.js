@@ -73,6 +73,8 @@ function makeOpts(overrides = {}) {
 
 // ── Widget definitions ──────────────────────────────────────────────────────
 const WIDGETS = [
+    { id: 'overview',     label: 'Gesamtansicht',          fullWidth: true, noChart: true },
+    { id: 'scoreCards',   label: 'Aktuelle Werte',         fullWidth: true, noChart: true },
     { id: 'scoresTrend',  label: 'Tages-Scores',          fullWidth: true  },
     { id: 'sleepStages',  label: 'Schlaf-Phasen',         fullWidth: false },
     { id: 'hrHrv',        label: 'Ruhe-HF & HRV',        fullWidth: false },
@@ -252,13 +254,16 @@ function onHandlePointerUp(e, widgetId) {
 }
 
 // ── Create widget box ───────────────────────────────────────────────────────
-function createWidgetBox(widgetId, title, extraHtml = '') {
+function createWidgetBox(widgetId, title, extraHtml = '', noChart = false) {
     const vis = getVisibility();
     const full = isFullWidth(widgetId);
     const box = document.createElement('div');
     box.className = 'chart-box' + (full ? ' full-width' : '') + (!vis[widgetId] ? ' hidden' : '');
     box.id = 'box_' + widgetId;
     box.setAttribute('data-widget', widgetId);
+    const contentHtml = noChart
+        ? `<div class="widget-content" id="content_${widgetId}"></div>`
+        : `<div class="chart-container"><canvas id="${widgetId}"></canvas></div>`;
     box.innerHTML = `
         <span class="drag-handle" title="Klick: Breite \u00e4ndern | Halten: Verschieben"
               onpointerdown="onHandlePointerDown(event)"
@@ -273,7 +278,7 @@ function createWidgetBox(widgetId, title, extraHtml = '') {
             </div>
         </div>
         <h3>${title}</h3>
-        <div class="chart-container"><canvas id="${widgetId}"></canvas></div>
+        ${contentHtml}
         ${extraHtml}
     `;
     return box;
@@ -307,7 +312,6 @@ function setDateRange(start, end, filter = null) {
     activeFilter = filter;
     updateFilterButtons();
     document.getElementById('subtitle').textContent = start === end ? start : `${start} bis ${end}`;
-    loadScoreCards();
     loadAllWidgets();
 }
 
@@ -350,34 +354,41 @@ async function triggerSync() {
             btn.classList.remove('syncing');
             btn.textContent = 'Sync';
             // Reload data
-            loadScoreCards();
             loadAllWidgets();
         }
     }, 2000);
 }
 
 // ── Score Cards ─────────────────────────────────────────────────────────────
-async function loadScoreCards() {
+async function buildScoreCards() {
     const scores = await fetchJSON(`/api/scores${qs(currentStart, currentEnd)}`);
-    let html = '';
+    if (!scores.readiness && !scores.sleep && !scores.activity) return null;
+    return scores;
+}
+
+function renderScoreCards(scores) {
+    const el = document.getElementById('content_scoreCards');
+    if (!el) return;
+    let html = '<div class="score-cards-grid">';
 
     if (scores.readiness) {
-        html += `<div class="score-card"><div class="label">${tip('Readiness')}</div><div class="value color-green">${scores.readiness.score}</div><div class="unit">${scores.readiness.day}</div></div>`;
+        html += `<div class="score-card"><div class="label">${tip('Readiness')}</div><div class="value color-green">${scores.readiness.score}</div></div>`;
     }
     if (scores.sleep) {
-        html += `<div class="score-card"><div class="label">${tip('Schlaf')}</div><div class="value color-blue">${scores.sleep.score}</div><div class="unit">${scores.sleep.day}</div></div>`;
+        html += `<div class="score-card"><div class="label">${tip('Schlaf')}</div><div class="value color-blue">${scores.sleep.score}</div></div>`;
     }
     if (scores.activity) {
-        html += `<div class="score-card"><div class="label">${tip('Aktivitaet')}</div><div class="value color-purple">${scores.activity.score}</div><div class="unit">${scores.activity.day}</div></div>`;
+        html += `<div class="score-card"><div class="label">${tip('Aktivitaet')}</div><div class="value color-purple">${scores.activity.score}</div></div>`;
     }
     if (scores.sleep_detail) {
         const sd = scores.sleep_detail;
-        html += `<div class="score-card"><div class="label">${tip('Schlaf Dauer')}</div><div class="value color-cyan">${sec2h(sd.total_sleep_duration)}</div><div class="unit">Stunden</div></div>`;
-        html += `<div class="score-card"><div class="label">${tip('Ruhe-HF')}</div><div class="value color-orange">${sd.lowest_heart_rate}</div><div class="unit">bpm</div></div>`;
-        html += `<div class="score-card"><div class="label">${tip('HRV')}</div><div class="value color-green">${sd.average_hrv}</div><div class="unit">ms</div></div>`;
+        html += `<div class="score-card"><div class="label">${tip('Schlaf Dauer')}</div><div class="value color-cyan">${sec2h(sd.total_sleep_duration)}<span class="value-unit">H</span></div></div>`;
+        html += `<div class="score-card"><div class="label">${tip('Ruhe-HF')}</div><div class="value color-orange">${sd.lowest_heart_rate}<span class="value-unit">BPM</span></div></div>`;
+        html += `<div class="score-card"><div class="label">${tip('HRV')}</div><div class="value color-green">${sd.average_hrv}<span class="value-unit">MS</span></div></div>`;
     }
 
-    document.getElementById('scoreCards').innerHTML = html;
+    html += '</div>';
+    el.innerHTML = html;
 }
 
 // ── Chart builders ──────────────────────────────────────────────────────────
@@ -438,6 +449,12 @@ function hbarOpts(max) {
             y: { grid: { display: false }, ticks: { color: '#aaa', font: { size: 13 } } },
         },
     };
+}
+
+async function buildOverview() {
+    const data = await fetchJSON('/api/overview');
+    if (!data.overall_first) return null;
+    return data; // Return raw data, rendered separately
 }
 
 async function buildScoresTrend() {
@@ -873,6 +890,8 @@ async function buildResilience() {
 
 // ── Widget → builder mapping ────────────────────────────────────────────────
 const BUILDERS = {
+    overview:    { build: buildOverview, title: () => 'Gesamt\u00fcbersicht', noChart: true },
+    scoreCards:  { build: buildScoreCards, title: () => 'Aktuelle Werte', noChart: true },
     scoresTrend: { build: buildScoresTrend, title: () => 'Tages-Scores (' + tip('Readiness') + ' / ' + tip('Schlaf') + ' / ' + tip('Aktivitaet') + ')' },
     sleepStages: { build: buildSleepStages, title: () => tip('Schlaf-Phasen') + ' pro Nacht',
         extraHtml: `<div class="sleep-legend"><span class="leg-deep">${tip('Tiefschlaf')}</span><span class="leg-light">${tip('Leicht')}</span><span class="leg-rem">${tip('REM')}</span><span class="leg-awake">${tip('Wach')}</span></div>` },
@@ -888,6 +907,45 @@ const BUILDERS = {
 };
 
 // ── Load a single widget ────────────────────────────────────────────────────
+function renderOverview(data) {
+    const el = document.getElementById('content_overview');
+    if (!el) return;
+    const fmtDate = d => new Date(d + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    el.innerHTML = `
+        <div class="overview-summary">
+            <div class="overview-stat">
+                <div class="overview-stat-label">Erster Eintrag</div>
+                <div class="overview-stat-value">${fmtDate(data.overall_first)}</div>
+            </div>
+            <div class="overview-stat">
+                <div class="overview-stat-label">Letzter Eintrag</div>
+                <div class="overview-stat-value">${fmtDate(data.overall_last)}</div>
+            </div>
+            <div class="overview-stat">
+                <div class="overview-stat-label">Erfasste Tage</div>
+                <div class="overview-stat-value">${data.total_days}</div>
+            </div>
+        </div>
+        <div class="overview-table">
+            <table>
+                <thead><tr><th>Kategorie</th><th>Erster Eintrag</th><th>Letzter Eintrag</th><th>Tage</th><th>Eintr\u00e4ge</th></tr></thead>
+                <tbody>
+                    ${data.categories.map(c => {
+                        const days = Math.round((new Date(c.last_day) - new Date(c.first_day)) / 86400000) + 1;
+                        return `<tr>
+                            <td>${c.label}</td>
+                            <td>${fmtDate(c.first_day)}</td>
+                            <td>${fmtDate(c.last_day)}</td>
+                            <td>${days}</td>
+                            <td>${c.count.toLocaleString('de-DE')}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
 async function loadWidget(widgetId) {
     const builder = BUILDERS[widgetId];
     if (!builder) return;
@@ -896,8 +954,16 @@ async function loadWidget(widgetId) {
         const config = await builder.build();
         if (!config) return;
 
+        // Non-chart widgets
+        if (builder.noChart) {
+            if (widgetId === 'overview') renderOverview(config);
+            if (widgetId === 'scoreCards') renderScoreCards(config);
+            chartInstances[widgetId] = true; // Mark as loaded
+            return;
+        }
+
         // Destroy previous chart if exists
-        if (chartInstances[widgetId]) {
+        if (chartInstances[widgetId] && chartInstances[widgetId] !== true) {
             chartInstances[widgetId].destroy();
             delete chartInstances[widgetId];
         }
@@ -931,7 +997,7 @@ function buildWidgetGrid() {
     order.forEach(widgetId => {
         const builder = BUILDERS[widgetId];
         if (!builder) return;
-        const box = createWidgetBox(widgetId, builder.title(), builder.extraHtml || '');
+        const box = createWidgetBox(widgetId, builder.title(), builder.extraHtml || '', !!builder.noChart);
         grid.appendChild(box);
     });
 
@@ -1033,7 +1099,6 @@ async function init() {
     endInput.addEventListener('change', onDateChange);
 
     // Build UI
-    loadScoreCards();
     buildWidgetToggles();
     buildWidgetGrid();
     loadAllWidgets();

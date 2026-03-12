@@ -131,6 +131,7 @@ h1 {
 .score-card .label { font-size: 0.75rem; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 .score-card .value { font-size: 1.8rem; font-weight: 700; }
 .score-card .unit { font-size: 0.7rem; color: #666; margin-top: 2px; }
+.value-unit { font-size: 0.9rem; font-weight: 500; opacity: 0.6; margin-left: 2px; }
 
 .color-green  { color: #6ee7b7; }
 .color-blue   { color: #60a5fa; }
@@ -154,6 +155,8 @@ h1 {
     border: 1px solid #2a2a3a;
     position: relative;
     transition: opacity 0.3s, transform 0.3s;
+    display: flex;
+    flex-direction: column;
 }
 
 .chart-box h3 {
@@ -414,6 +417,95 @@ h1 {
     color: #555;
     padding: 40px;
     font-size: 0.9rem;
+}
+
+/* ── Score Cards in Widget ─────────────────────────────────── */
+.score-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    height: 100%;
+}
+
+.widget-content {
+    flex: 1;
+}
+
+.score-cards-grid .score-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.score-cards-grid .score-card .label {
+    font-size: 0.85rem;
+}
+
+.score-cards-grid .score-card .value {
+    font-size: 2.4rem;
+}
+
+/* ── Overview Widget ───────────────────────────────────────── */
+.overview-summary {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.overview-stat {
+    flex: 1;
+    min-width: 140px;
+    background: #13131a;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid #2a2a3a;
+}
+
+.overview-stat-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.overview-stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #6ee7b7;
+}
+
+.overview-table {
+    overflow-x: auto;
+}
+
+.overview-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.overview-table th {
+    text-align: left;
+    color: #888;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-bottom: 1px solid #2a2a3a;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.overview-table td {
+    padding: 8px 12px;
+    color: #ccc;
+    border-bottom: 1px solid #1f1f2e;
+}
+
+.overview-table tr:hover td {
+    background: #13131a;
 }
 
 .chart-box.hidden {
