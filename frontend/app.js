@@ -1,5 +1,27 @@
 // ── Oura Dashboard App ──────────────────────────────────────────────────────
 
+// ── Theme ────────────────────────────────────────────────────────────────────
+function getTheme() {
+    return localStorage.getItem('oura_theme') || 'dark';
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const btn = document.getElementById('themeBtn');
+    if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+    const next = getTheme() === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('oura_theme', next);
+    applyTheme(next);
+    // Re-render all charts with new theme colors
+    loadAllWidgets();
+}
+
+// Apply theme immediately (before content loads)
+applyTheme(getTheme());
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const sec2h = s => (s / 3600).toFixed(1);
 const sec2min = s => Math.round(s / 60);
@@ -40,35 +62,40 @@ function tip(term, display) {
     return `<span class="tip">${display || term}<span class="tip-text">${text}</span></span>`;
 }
 
-// ── Chart defaults ──────────────────────────────────────────────────────────
-const CHART_DEFAULTS = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: '#1a1a24',
-            titleColor: '#e0e0e0',
-            bodyColor: '#aaa',
-            borderColor: '#2a2a3a',
-            borderWidth: 1,
-        }
-    },
-    scales: {
-        x: {
-            grid: { color: '#1f1f2e' },
-            ticks: { color: '#555', maxTicksLimit: 10 }
+// ── Chart defaults (theme-aware) ────────────────────────────────────────────
+function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function chartDefaults() {
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: cssVar('--bg-card'),
+                titleColor: cssVar('--text'),
+                bodyColor: cssVar('--text-secondary'),
+                borderColor: cssVar('--border'),
+                borderWidth: 1,
+            }
         },
-        y: {
-            grid: { color: '#1f1f2e' },
-            ticks: { color: '#555' }
+        scales: {
+            x: {
+                grid: { color: cssVar('--grid-line') },
+                ticks: { color: cssVar('--text-faint'), maxTicksLimit: 10 }
+            },
+            y: {
+                grid: { color: cssVar('--grid-line') },
+                ticks: { color: cssVar('--text-faint') }
+            }
         }
-    }
-};
+    };
+}
 
 function makeOpts(overrides = {}) {
-    const base = JSON.parse(JSON.stringify(CHART_DEFAULTS));
-    return { ...base, ...overrides };
+    return { ...chartDefaults(), ...overrides };
 }
 
 // ── Widget definitions ──────────────────────────────────────────────────────
@@ -404,8 +431,8 @@ function doughnutOpts(centerLabel) {
         plugins: {
             legend: { display: false },
             tooltip: {
-                backgroundColor: '#1a1a24', titleColor: '#e0e0e0', bodyColor: '#aaa',
-                borderColor: '#2a2a3a', borderWidth: 1,
+                backgroundColor: cssVar('--bg-card'), titleColor: cssVar('--text'), bodyColor: cssVar('--text-secondary'),
+                borderColor: cssVar('--border'), borderWidth: 1,
             },
         },
     };
@@ -426,7 +453,7 @@ const centerTextPlugin = {
         ctx.fillText(txt.main, cx, cy + 4);
         if (txt.sub) {
             ctx.font = `0.75rem -apple-system, BlinkMacSystemFont, sans-serif`;
-            ctx.fillStyle = '#666';
+            ctx.fillStyle = cssVar('--text-dim');
             ctx.fillText(txt.sub, cx, cy + 24);
         }
         ctx.restore();
@@ -442,11 +469,11 @@ function hbarOpts(max) {
         indexAxis: 'y',
         plugins: {
             legend: { display: false },
-            tooltip: { backgroundColor: '#1a1a24', titleColor: '#e0e0e0', bodyColor: '#aaa', borderColor: '#2a2a3a', borderWidth: 1 },
+            tooltip: { backgroundColor: cssVar('--bg-card'), titleColor: cssVar('--text'), bodyColor: cssVar('--text-secondary'), borderColor: cssVar('--border'), borderWidth: 1 },
         },
         scales: {
-            x: { min: 0, max, grid: { color: '#1f1f2e' }, ticks: { color: '#555' } },
-            y: { grid: { display: false }, ticks: { color: '#aaa', font: { size: 13 } } },
+            x: { min: 0, max, grid: { color: cssVar('--grid-line') }, ticks: { color: cssVar('--text-faint') } },
+            y: { grid: { display: false }, ticks: { color: cssVar('--text-secondary'), font: { size: 13 } } },
         },
     };
 }
@@ -489,7 +516,7 @@ async function buildScoresTrend() {
     const aMap = Object.fromEntries(data.activity.map(d => [d.day, d.score]));
     const opts = makeOpts();
     opts.scales.y.min = 0; opts.scales.y.max = 100;
-    opts.plugins.legend = { display: true, labels: { color: '#888' } };
+    opts.plugins.legend = { display: true, labels: { color: cssVar('--text-muted') } };
     return {
         type: 'line',
         data: {
@@ -534,7 +561,7 @@ async function buildSleepStages() {
     const nights = data.map(d => d.day);
     const opts = makeOpts();
     opts.scales.x = { ...opts.scales.x, stacked: true };
-    opts.scales.y = { ...opts.scales.y, stacked: true, title: { display: true, text: 'Stunden', color: '#555' } };
+    opts.scales.y = { ...opts.scales.y, stacked: true, title: { display: true, text: 'Stunden', color: cssVar('--text-faint') } };
     return {
         type: 'bar',
         data: {
@@ -573,9 +600,9 @@ async function buildHrHrv() {
 
     const nights = data.map(d => d.day);
     const opts = makeOpts();
-    opts.plugins.legend = { display: true, labels: { color: '#888' } };
-    opts.scales.y = { position: 'left', grid: { color: '#1f1f2e' }, ticks: { color: '#555' }, title: { display: true, text: 'bpm', color: '#555' } };
-    opts.scales.y1 = { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#555' }, title: { display: true, text: 'ms (HRV)', color: '#555' } };
+    opts.plugins.legend = { display: true, labels: { color: cssVar('--text-muted') } };
+    opts.scales.y = { position: 'left', grid: { color: cssVar('--grid-line') }, ticks: { color: cssVar('--text-faint') }, title: { display: true, text: 'bpm', color: cssVar('--text-faint') } };
+    opts.scales.y1 = { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: cssVar('--text-faint') }, title: { display: true, text: 'ms (HRV)', color: cssVar('--text-faint') } };
     return {
         type: 'line',
         data: {
@@ -604,7 +631,7 @@ async function buildSteps() {
                 labels: ['Schritte', 'Verbleibend'],
                 datasets: [{
                     data: [steps, Math.max(goal - steps, 0)],
-                    backgroundColor: ['#a78bfa', '#1f1f2e'],
+                    backgroundColor: ['#a78bfa', cssVar('--gauge-empty')],
                     borderWidth: 0,
                 }]
             },
@@ -613,7 +640,7 @@ async function buildSteps() {
     }
 
     const opts = makeOpts();
-    opts.scales.y.title = { display: true, text: 'Schritte', color: '#555' };
+    opts.scales.y.title = { display: true, text: 'Schritte', color: cssVar('--text-faint') };
     return {
         type: 'bar',
         data: {
@@ -649,8 +676,8 @@ async function buildStress() {
     }
 
     const opts = makeOpts();
-    opts.plugins.legend = { display: true, labels: { color: '#888' } };
-    opts.scales.y.title = { display: true, text: 'Minuten', color: '#555' };
+    opts.plugins.legend = { display: true, labels: { color: cssVar('--text-muted') } };
+    opts.scales.y.title = { display: true, text: 'Minuten', color: cssVar('--text-faint') };
     return {
         type: 'bar',
         data: {
@@ -679,7 +706,7 @@ async function buildSpo2() {
                 labels: ['SpO2', ''],
                 datasets: [{
                     data: [val - 90, 100 - val],  // scale 90-100 range
-                    backgroundColor: ['#22d3ee', '#1f1f2e'],
+                    backgroundColor: ['#22d3ee', cssVar('--gauge-empty')],
                     borderWidth: 0,
                 }]
             },
@@ -689,7 +716,7 @@ async function buildSpo2() {
 
     const opts = makeOpts();
     opts.scales.y.min = 90; opts.scales.y.max = 100;
-    opts.scales.y.title = { display: true, text: '%', color: '#555' };
+    opts.scales.y.title = { display: true, text: '%', color: cssVar('--text-faint') };
     return {
         type: 'line',
         data: {
@@ -715,7 +742,7 @@ async function buildCvAge() {
                 labels: ['Kardio-Alter', 'Echtes Alter'],
                 datasets: [{
                     data: [vAge, realAge],
-                    backgroundColor: ['#fbbf24', '#555'],
+                    backgroundColor: ['#fbbf24', cssVar('--text-faint')],
                     borderRadius: 6,
                     barThickness: 32,
                 }]
@@ -725,15 +752,15 @@ async function buildCvAge() {
     }
 
     const opts = makeOpts();
-    opts.plugins.legend = { display: true, labels: { color: '#888' } };
-    opts.scales.y.title = { display: true, text: 'Alter (Jahre)', color: '#555' };
+    opts.plugins.legend = { display: true, labels: { color: cssVar('--text-muted') } };
+    opts.scales.y.title = { display: true, text: 'Alter (Jahre)', color: cssVar('--text-faint') };
     return {
         type: 'line',
         data: {
             labels: data.map(d => d.day),
             datasets: [
                 { label: 'Kardio-Alter', data: data.map(d => d.vascular_age), borderColor: '#fbbf24', tension: 0.3, pointRadius: 3 },
-                { label: 'Echtes Alter', data: data.map(d => realAge), borderColor: '#555', borderDash: [5, 5], pointRadius: 0 },
+                { label: 'Echtes Alter', data: data.map(d => realAge), borderColor: cssVar('--text-faint'), borderDash: [5, 5], pointRadius: 0 },
             ]
         },
         options: opts,
@@ -750,7 +777,7 @@ async function buildCalories() {
         const basal = (d.total_calories || 0) - active;
         const opts = doughnutOpts();
         opts._centerText = { main: `${d.total_calories}`, sub: 'kcal gesamt' };
-        opts.plugins.legend = { display: true, position: 'bottom', labels: { color: '#888', padding: 16 } };
+        opts.plugins.legend = { display: true, position: 'bottom', labels: { color: cssVar('--text-muted'), padding: 16 } };
         return {
             type: 'doughnut',
             data: {
@@ -766,8 +793,8 @@ async function buildCalories() {
     }
 
     const opts = makeOpts();
-    opts.plugins.legend = { display: true, labels: { color: '#888' } };
-    opts.scales.y.title = { display: true, text: 'kcal', color: '#555' };
+    opts.plugins.legend = { display: true, labels: { color: cssVar('--text-muted') } };
+    opts.scales.y.title = { display: true, text: 'kcal', color: cssVar('--text-faint') };
     return {
         type: 'bar',
         data: {
@@ -795,7 +822,7 @@ async function buildSleepEff() {
                 labels: ['Effizienz', ''],
                 datasets: [{
                     data: [eff, 100 - eff],
-                    backgroundColor: ['#60a5fa', '#1f1f2e'],
+                    backgroundColor: ['#60a5fa', cssVar('--gauge-empty')],
                     borderWidth: 0,
                 }]
             },
@@ -805,7 +832,7 @@ async function buildSleepEff() {
 
     const opts = makeOpts();
     opts.scales.y.min = 70; opts.scales.y.max = 100;
-    opts.scales.y.title = { display: true, text: '%', color: '#555' };
+    opts.scales.y.title = { display: true, text: '%', color: cssVar('--text-faint') };
     return {
         type: 'line',
         data: {
@@ -832,7 +859,7 @@ async function buildHr24() {
     }
 
     const opts = makeOpts();
-    opts.scales.y.title = { display: true, text: 'bpm', color: '#555' };
+    opts.scales.y.title = { display: true, text: 'bpm', color: cssVar('--text-faint') };
     return {
         type: 'line',
         data: {
@@ -868,7 +895,7 @@ async function buildResilience() {
     }
 
     const opts = makeOpts();
-    opts.scales.y.title = { display: true, text: 'Ratio', color: '#555' };
+    opts.scales.y.title = { display: true, text: 'Ratio', color: cssVar('--text-faint') };
     return {
         type: 'line',
         data: {
