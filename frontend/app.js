@@ -71,6 +71,7 @@ function chartDefaults() {
     return {
         responsive: true,
         maintainAspectRatio: false,
+        devicePixelRatio: Math.max(window.devicePixelRatio, 2),
         plugins: {
             legend: { display: false },
             tooltip: {
