@@ -177,6 +177,12 @@ function setWidgetSize(widgetId, size) {
     const box = document.getElementById('box_' + widgetId);
     if (box) {
         box.classList.toggle('full-width', size === 'full');
+        // Update checkmarks
+        const popup = document.getElementById('popup_' + widgetId);
+        if (popup) {
+            popup.querySelector('.check-normal').textContent = size === 'full' ? '' : '\u2713';
+            popup.querySelector('.check-full').textContent = size === 'full' ? '\u2713' : '';
+        }
         // Re-render chart to fit new size
         if (chartInstances[widgetId]) {
             chartInstances[widgetId].resize();
