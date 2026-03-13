@@ -1090,14 +1090,7 @@ async function init() {
     // Load personal info
     personalInfo = await fetchJSON('/api/personal-info');
 
-    // Load profile display
-    if (personalInfo && personalInfo.age) {
-        document.getElementById('profile').innerHTML = `
-            <div class="profile-item">Alter: <span>${personalInfo.age}</span></div>
-            <div class="profile-item">Gewicht: <span>${personalInfo.weight} kg</span></div>
-            <div class="profile-item">Gr\u00f6\u00dfe: <span>${(personalInfo.height * 100).toFixed(0)} cm</span></div>
-        `;
-    }
+    // Personal info loaded (used internally, e.g. cardiovascular age widget)
 
     // Get date range from DB
     const range = await fetchJSON('/api/date-range');
@@ -1109,6 +1102,8 @@ async function init() {
         endInput.value = range.max_day;
         currentStart = range.min_day;
         currentEnd = range.max_day;
+        activeFilter = 'all';
+        updateFilterButtons();
         document.getElementById('subtitle').textContent = `${range.min_day} bis ${range.max_day} \u00b7 ${Math.round((new Date(range.max_day) - new Date(range.min_day)) / 86400000)} Tage`;
     } else {
         // Fallback: last 30 days

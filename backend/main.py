@@ -82,6 +82,16 @@ async def index():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
+@app.get("/data")
+async def data_page():
+    return FileResponse(str(FRONTEND_DIR / "data.html"))
+
+
+@app.get("/api/data-days")
+async def data_days():
+    return db.get_data_days()
+
+
 @app.get("/api/personal-info")
 async def personal_info():
     data = db.get_personal_info()

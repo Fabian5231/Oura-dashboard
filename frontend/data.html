@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oura – Daten-Kalender</title>
+    <link rel="icon" href="/static/favicon.svg">
+    <style>
+        /* ── Theme Variables (same as main dashboard) ─── */
+        :root {
+            --bg: #0f0f14;
+            --bg-card: #1a1a24;
+            --bg-card-deep: #13131a;
+            --bg-hover: #252535;
+            --border: #2a2a3a;
+            --border-hover: #3a3a4a;
+            --text: #e0e0e0;
+            --text-secondary: #aaa;
+            --text-muted: #888;
+            --text-dim: #666;
+            --text-faint: #555;
+            --text-subtle: #ccc;
+            --shadow: rgba(0,0,0,0.5);
+        }
+
+        [data-theme="light"] {
+            --bg: #f0f2f5;
+            --bg-card: #ffffff;
+            --bg-card-deep: #f0f0f5;
+            --bg-hover: #e4e4ec;
+            --border: #d0d0da;
+            --border-hover: #b8b8c8;
+            --text: #1a1a2e;
+            --text-secondary: #555;
+            --text-muted: #777;
+            --text-dim: #999;
+            --text-faint: #aaa;
+            --text-subtle: #444;
+            --shadow: rgba(0,0,0,0.08);
+        }
+
+        /* ── Reset ─── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* ── Header ─── */
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #6ee7b7, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            line-height: 1;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
+        }
+
+        /* ── Stats ─── */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .stat-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 18px;
+            text-align: center;
+        }
+
+        .stat-chip .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #6ee7b7;
+        }
+
+        .stat-chip .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        /* ── Legend ─── */
+        .legend {
+            display: flex;
+            gap: 18px;
+            justify-content: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* ── Calendar Grid ─── */
+        .calendar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .month-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .month-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-bottom: 4px;
+        }
+
+        .weekday-header span {
+            text-align: center;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            font-weight: 500;
+            padding: 4px 0;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            border-radius: 6px;
+            color: var(--text-dim);
+            position: relative;
+            transition: transform 0.15s;
+        }
+
+        .day-cell.empty {
+            visibility: hidden;
+        }
+
+        .day-cell.has-data {
+            color: #fff;
+            font-weight: 600;
+            cursor: default;
+        }
+
+        .day-cell.has-data:hover {
+            transform: scale(1.2);
+            z-index: 2;
+        }
+
+        .day-cell.today {
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+
+        .day-cell.future {
+            color: var(--text-faint);
+            opacity: 0.3;
+        }
+
+        /* Data intensity colors */
+        .data-1 { background: rgba(110, 231, 183, 0.20); color: #6ee7b7; }
+        .data-2 { background: rgba(110, 231, 183, 0.35); color: #6ee7b7; }
+        .data-3 { background: rgba(110, 231, 183, 0.50); color: #fff; }
+        .data-4 { background: rgba(110, 231, 183, 0.65); color: #fff; }
+        .data-5 { background: rgba(110, 231, 183, 0.80); color: #fff; }
+        .data-6 { background: rgba(110, 231, 183, 1.0); color: #0f0f14; }
+
+        /* ── Tooltip ─── */
+        .day-cell .day-tooltip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-hover);
+            border: 1px solid var(--border-hover);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--text-subtle);
+            white-space: nowrap;
+            box-shadow: 0 4px 16px var(--shadow);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .day-cell.has-data:hover .day-tooltip {
+            display: block;
+        }
+
+        .day-tooltip .tt-date {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .day-tooltip .tt-cats {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .day-tooltip .tt-cat {
+            background: rgba(110, 231, 183, 0.15);
+            color: #6ee7b7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        /* ── Responsive ─── */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .calendar-container { grid-template-columns: 1fr; }
+        }
+
+        /* ── Loading ─── */
+        .loading {
+            text-align: center;
+            color: var(--text-faint);
+            padding: 60px;
+            font-size: 0.9rem;
+        }
+    </style>
+    <script>
+        // Apply saved theme immediately
+        (function() {
+            const t = localStorage.getItem('oura_theme');
+            if (t) document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+</head>
+<body>
+    <h1>Daten-Kalender</h1>
+    <div class="header-row">
+        <p class="subtitle" id="subtitle">Lade Daten...</p>
+        <button class="theme-toggle" id="themeBtn" title="Theme wechseln"></button>
+    </div>
+
+    <div class="stats-bar" id="stats" style="display:none;"></div>
+
+    <div class="legend" id="legend" style="display:none;">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(110,231,183,0.20)"></div> 1 Kategorie</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(110,231,183,0.50)"></div> 3</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(110,231,183,1.0)"></div> 6 Kategorien</div>
+    </div>
+
+    <div id="calendar" class="calendar-container">
+        <div class="loading">Lade Kalender...</div>
+    </div>
+
+    <script>
+    const MONTH_NAMES = [
+        'Januar','Februar','März','April','Mai','Juni',
+        'Juli','August','September','Oktober','November','Dezember'
+    ];
+    const WEEKDAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+    const CAT_LABELS = {
+        has_readiness: 'Readiness',
+        has_sleep: 'Schlaf',
+        has_activity: 'Aktivität',
+        has_stress: 'Stress',
+        has_spo2: 'SpO2',
+        has_hr: 'Herzfrequenz',
+    };
+
+    // Theme
+    function initTheme() {
+        const btn = document.getElementById('themeBtn');
+        const update = () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            btn.textContent = current === 'light' ? '🌙' : '☀️';
+        };
+        btn.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next === 'dark' ? '' : 'light');
+            if (next === 'dark') document.documentElement.removeAttribute('data-theme');
+            else document.documentElement.setAttribute('data-theme', 'light');
+            localStorage.setItem('oura_theme', next === 'dark' ? '' : 'light');
+            update();
+        });
+        update();
+    }
+
+    function buildCalendar(dataDays) {
+        // Build lookup: day -> { count, categories[] }
+        const lookup = {};
+        for (const d of dataDays) {
+            const cats = [];
+            let count = 0;
+            for (const key of Object.keys(CAT_LABELS)) {
+                if (d[key]) { cats.push(CAT_LABELS[key]); count++; }
+            }
+            lookup[d.day] = { count, cats };
+        }
+
+        // Determine range
+        const days = dataDays.map(d => d.day).sort();
+        if (!days.length) {
+            document.getElementById('calendar').innerHTML = '<div class="loading">Keine Daten vorhanden.</div>';
+            document.getElementById('subtitle').textContent = 'Keine Daten gefunden';
+            return;
+        }
+
+        const firstDay = days[0];
+        const lastDay = days[days.length - 1];
+        const totalDays = days.length;
+
+        // Stats
+        const statsEl = document.getElementById('stats');
+        statsEl.style.display = '';
+        statsEl.innerHTML = `
+            <div class="stat-chip"><div class="stat-value">${totalDays}</div><div class="stat-label">Tage mit Daten</div></div>
+            <div class="stat-chip"><div class="stat-value">${firstDay}</div><div class="stat-label">Erster Tag</div></div>
+            <div class="stat-chip"><div class="stat-value">${lastDay}</div><div class="stat-label">Letzter Tag</div></div>
+        `;
+        document.getElementById('subtitle').textContent = `${firstDay} bis ${lastDay}`;
+        document.getElementById('legend').style.display = '';
+
+        // Build months from first to last
+        const startDate = new Date(firstDay + 'T00:00:00');
+        const endDate = new Date(lastDay + 'T00:00:00');
+        const todayStr = new Date().toISOString().slice(0, 10);
+
+        let current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        const container = document.getElementById('calendar');
+        container.innerHTML = '';
+
+        // Render newest months first
+        const months = [];
+        while (current <= endDate) {
+            months.push(new Date(current));
+            current.setMonth(current.getMonth() + 1);
+        }
+        months.reverse();
+
+        for (const monthDate of months) {
+            const year = monthDate.getFullYear();
+            const month = monthDate.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            // Monday-based: 0=Mo, 6=So
+            const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+
+            const card = document.createElement('div');
+            card.className = 'month-card';
+
+            let html = `<div class="month-title">${MONTH_NAMES[month]} ${year}</div>`;
+            html += '<div class="weekday-header">';
+            for (const w of WEEKDAYS) html += `<span>${w}</span>`;
+            html += '</div><div class="days-grid">';
+
+            // Empty cells before first day
+            for (let i = 0; i < firstDow; i++) html += '<div class="day-cell empty"></div>';
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const info = lookup[dateStr];
+                const isToday = dateStr === todayStr;
+                const isFuture = dateStr > todayStr;
+
+                let cls = 'day-cell';
+                if (isFuture) cls += ' future';
+                if (isToday) cls += ' today';
+
+                if (info) {
+                    cls += ` has-data data-${info.count}`;
+                    const tooltip = `<div class="day-tooltip"><div class="tt-date">${dateStr}</div><div class="tt-cats">${info.cats.map(c => `<span class="tt-cat">${c}</span>`).join('')}</div></div>`;
+                    html += `<div class="${cls}">${d}${tooltip}</div>`;
+                } else {
+                    html += `<div class="${cls}">${d}</div>`;
+                }
+            }
+
+            html += '</div>';
+            card.innerHTML = html;
+            container.appendChild(card);
+        }
+    }
+
+    async function init() {
+        initTheme();
+        try {
+            const resp = await fetch('/api/data-days');
+            const data = await resp.json();
+            buildCalendar(data);
+        } catch (e) {
+            document.getElementById('calendar').innerHTML = `<div class="loading">Fehler beim Laden: ${e.message}</div>`;
+        }
+    }
+
+    init();
+    </script>
+</body>
+</html>

@@ -467,6 +467,32 @@ def get_overview() -> dict:
     }
 
 
+def get_data_days() -> list[dict]:
+    """Return all unique days that have data, with info about which categories are present."""
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT day,
+               MAX(has_readiness) as has_readiness,
+               MAX(has_sleep) as has_sleep,
+               MAX(has_activity) as has_activity,
+               MAX(has_stress) as has_stress,
+               MAX(has_spo2) as has_spo2,
+               MAX(has_hr) as has_hr
+        FROM (
+            SELECT day, 1 as has_readiness, 0 as has_sleep, 0 as has_activity, 0 as has_stress, 0 as has_spo2, 0 as has_hr FROM daily_readiness
+            UNION ALL SELECT day, 0, 1, 0, 0, 0, 0 FROM daily_sleep
+            UNION ALL SELECT day, 0, 0, 1, 0, 0, 0 FROM daily_activity
+            UNION ALL SELECT day, 0, 0, 0, 1, 0, 0 FROM daily_stress
+            UNION ALL SELECT day, 0, 0, 0, 0, 1, 0 FROM daily_spo2
+            UNION ALL SELECT substr(timestamp, 1, 10) as day, 0, 0, 0, 0, 0, 1 FROM heartrate
+        )
+        GROUP BY day
+        ORDER BY day
+    """).fetchall()
+    conn.close()
+    return _rows_to_dicts(rows)
+
+
 def get_latest_day(table: str) -> str | None:
     """Get the most recent day value from a given table."""
     conn = get_conn()
