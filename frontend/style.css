@@ -54,7 +54,12 @@ body {
     color: var(--text);
     padding: 20px;
     min-height: 100vh;
-    transition: background 0.3s, color 0.3s;
+}
+
+body, body *, body *::before, body *::after {
+    transition: background 0.4s ease, background-color 0.4s ease,
+                color 0.4s ease, border-color 0.4s ease,
+                box-shadow 0.4s ease;
 }
 
 /* ── Header ────────────────────────────────────────────────── */
