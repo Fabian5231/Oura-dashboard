@@ -406,6 +406,22 @@ def get_heartrate(date: str) -> list[dict]:
     return rows
 
 
+def get_heartrate_daily(start: str, end: str) -> list[dict]:
+    conn = get_conn()
+    rows = _rows_to_dicts(conn.execute(
+        """SELECT substr(timestamp, 1, 10) as day,
+                  MIN(bpm) as min_bpm,
+                  ROUND(AVG(bpm)) as avg_bpm,
+                  MAX(bpm) as max_bpm
+           FROM heartrate
+           WHERE substr(timestamp, 1, 10) BETWEEN ? AND ?
+           GROUP BY substr(timestamp, 1, 10)
+           ORDER BY day""",
+        (start, end)).fetchall())
+    conn.close()
+    return rows
+
+
 def get_date_range() -> dict:
     """Return earliest and latest day across main tables."""
     conn = get_conn()

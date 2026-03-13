@@ -233,6 +233,15 @@ async def heartrate(date: str | None = Query(None)):
     return db.get_heartrate(date)
 
 
+@app.get("/api/heartrate-daily")
+async def heartrate_daily(
+    start: str | None = Query(None),
+    end: str | None = Query(None),
+):
+    start, end = _default_range(start, end)
+    return db.get_heartrate_daily(start, end)
+
+
 @app.post("/api/sync")
 async def trigger_sync(background_tasks: BackgroundTasks):
     global _sync_running

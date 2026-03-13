@@ -859,27 +859,52 @@ async function buildSleepEff() {
 }
 
 async function buildHr24() {
-    // In single-day mode, fetch HR for that specific day
-    const dateParam = isSingleDay() ? `?date=${currentStart}` : '';
-    const data = await fetchJSON(`/api/heartrate${dateParam}`);
+    if (isSingleDay()) {
+        // Single day: show detailed 24h heart rate
+        const data = await fetchJSON(`/api/heartrate?date=${currentStart}`);
+        if (!data.length) return null;
+
+        const times = data.map(h => h.timestamp.slice(11, 16));
+        const bpms = data.map(h => h.bpm);
+
+        const box = document.getElementById('box_hr24');
+        if (box) box.querySelector('h3').innerHTML = tip('Herzfrequenz') + ` am ${currentStart}`;
+
+        const opts = makeOpts();
+        opts.scales.y.title = { display: true, text: 'bpm', color: cssVar('--text-faint') };
+        return {
+            type: 'line',
+            data: {
+                labels: times,
+                datasets: [{ data: bpms, borderColor: '#f8717188', borderWidth: 1.5, pointRadius: 0, tension: 0.1 }]
+            },
+            options: opts,
+        };
+    }
+
+    // Multi-day: show daily min/avg/max
+    const data = await fetchJSON(`/api/heartrate-daily${qs(currentStart, currentEnd)}`);
     if (!data.length) return null;
 
-    const times = data.map(h => h.timestamp.slice(11, 16));
-    const bpms = data.map(h => h.bpm);
-    const lastDay = data[0].timestamp.slice(0, 10);
-
     const box = document.getElementById('box_hr24');
-    if (box) {
-        box.querySelector('h3').innerHTML = tip('Herzfrequenz') + ` am ${lastDay}`;
-    }
+    if (box) box.querySelector('h3').innerHTML = tip('Herzfrequenz') + ' (Tageswerte)';
 
     const opts = makeOpts();
     opts.scales.y.title = { display: true, text: 'bpm', color: cssVar('--text-faint') };
+    opts.plugins.tooltip = {
+        callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} bpm`
+        }
+    };
     return {
         type: 'line',
         data: {
-            labels: times,
-            datasets: [{ data: bpms, borderColor: '#f8717188', borderWidth: 1.5, pointRadius: 0, tension: 0.1 }]
+            labels: data.map(d => d.day),
+            datasets: [
+                { label: 'Max', data: data.map(d => d.max_bpm), borderColor: '#f8717188', backgroundColor: '#f871711a', borderWidth: 1.2, pointRadius: 0, tension: 0.3, fill: false },
+                { label: 'Durchschnitt', data: data.map(d => d.avg_bpm), borderColor: '#fbbf24', backgroundColor: '#fbbf2422', borderWidth: 2, pointRadius: 2, tension: 0.3, fill: false },
+                { label: 'Min', data: data.map(d => d.min_bpm), borderColor: '#6ee7b7', backgroundColor: '#6ee7b71a', borderWidth: 1.2, pointRadius: 0, tension: 0.3, fill: false },
+            ]
         },
         options: opts,
     };
