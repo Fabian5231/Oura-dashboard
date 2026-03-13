@@ -72,14 +72,15 @@ def _fetch_paginated(endpoint: dict, start_date: str, end_date: str) -> list:
 
 
 def _compute_start_date(endpoint_name: str) -> str:
-    """Determine sync start: latest_day - 3 days (overlap) or 365 days back for first sync."""
+    """Determine sync start: latest_day - 3 days (overlap) or full history back."""
     if endpoint_name == "heartrate":
         latest = db.get_latest_heartrate_timestamp()
         if latest:
-            # Go back 3 days from latest timestamp
             latest_day = latest[:10]
             dt = datetime.strptime(latest_day, "%Y-%m-%d") - timedelta(days=3)
             return dt.strftime("%Y-%m-%d")
+        # First HR sync: max 30 days (Oura API limit for heartrate)
+        return (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
     else:
         latest = db.get_latest_day(endpoint_name)
         if latest:
@@ -114,12 +115,28 @@ def run_full_sync() -> dict:
             total_records += 1
 
         for ep in SYNC_ENDPOINTS:
-            print(f"  [FULL] Syncing {ep['name']} from {start_date}...")
-            records = _fetch_paginated(ep, start_date, end_date)
-            if records:
-                UPSERT_MAP[ep["name"]](records)
-                total_records += len(records)
-                print(f"    -> {len(records)} records")
+            if ep["name"] == "heartrate":
+                # Heartrate API only supports ~30 day ranges, fetch in chunks
+                chunk_start = datetime.strptime(start_date, "%Y-%m-%d")
+                chunk_end_max = datetime.strptime(end_date, "%Y-%m-%d")
+                while chunk_start < chunk_end_max:
+                    chunk_end = min(chunk_start + timedelta(days=29), chunk_end_max)
+                    cs = chunk_start.strftime("%Y-%m-%d")
+                    ce = chunk_end.strftime("%Y-%m-%d")
+                    print(f"  [FULL] Syncing heartrate {cs} to {ce}...")
+                    records = _fetch_paginated(ep, cs, ce)
+                    if records:
+                        UPSERT_MAP[ep["name"]](records)
+                        total_records += len(records)
+                        print(f"    -> {len(records)} records")
+                    chunk_start = chunk_end + timedelta(days=1)
+            else:
+                print(f"  [FULL] Syncing {ep['name']} from {start_date}...")
+                records = _fetch_paginated(ep, start_date, end_date)
+                if records:
+                    UPSERT_MAP[ep["name"]](records)
+                    total_records += len(records)
+                    print(f"    -> {len(records)} records")
 
         conn = db.get_conn()
         conn.execute(

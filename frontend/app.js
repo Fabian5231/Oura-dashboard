@@ -111,7 +111,7 @@ const WIDGETS = [
     { id: 'cvAge',        label: 'Kardiovaskul\u00e4res Alter', fullWidth: false },
     { id: 'calories',     label: 'Kalorien',              fullWidth: false },
     { id: 'sleepEff',     label: 'Schlaf-Effizienz',      fullWidth: false },
-    { id: 'hr24',         label: 'Herzfrequenz 24h',      fullWidth: true  },
+    { id: 'hr24',         label: 'Herzfrequenz',           fullWidth: true  },
     { id: 'resilience',   label: 'Resilienz',             fullWidth: false },
 ];
 
@@ -969,7 +969,7 @@ const BUILDERS = {
     cvAge:       { build: buildCvAge,       title: () => tip('Kardiovaskulaeres Alter') + ' vs. echtes Alter' },
     calories:    { build: buildCalories,    title: () => tip('Kalorien') + ' (aktiv vs. gesamt)' },
     sleepEff:    { build: buildSleepEff,    title: () => tip('Schlaf-Effizienz') },
-    hr24:        { build: buildHr24,        title: () => tip('Herzfrequenz') + ' (24h)' },
+    hr24:        { build: buildHr24,        title: () => tip('Herzfrequenz') },
     resilience:  { build: buildResilience,  title: () => 'Erholung/Stress Ratio' },
 };
 
