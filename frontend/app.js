@@ -15,8 +15,14 @@ function toggleTheme() {
     const next = getTheme() === 'dark' ? 'light' : 'dark';
     localStorage.setItem('oura_theme', next);
     applyTheme(next);
-    // Re-render charts with new theme colors
-    loadAllWidgets();
+    // Re-render only chart widgets (noChart widgets like score cards
+    // use CSS variables and transition smoothly via CSS)
+    const vis = getVisibility();
+    WIDGETS.forEach(w => {
+        if (vis[w.id] && !BUILDERS[w.id]?.noChart) {
+            loadWidget(w.id);
+        }
+    });
 }
 
 // Apply theme immediately (before content loads)
