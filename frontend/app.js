@@ -897,6 +897,7 @@ async function buildHr24() {
 
     const opts = makeOpts();
     opts.scales.y.title = { display: true, text: 'bpm', color: cssVar('--text-faint') };
+    opts.plugins.legend = { display: true, labels: { color: cssVar('--text-muted') } };
     opts.plugins.tooltip = {
         callbacks: {
             label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} bpm`
