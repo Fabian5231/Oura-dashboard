@@ -1087,10 +1087,12 @@ document.addEventListener('mouseover', function(e) {
 
 // ── Initialize ──────────────────────────────────────────────────────────────
 async function init() {
-    // Load personal info
-    personalInfo = await fetchJSON('/api/personal-info');
-
-    // Personal info loaded (used internally, e.g. cardiovascular age widget)
+    // Load personal info (used internally, e.g. cardiovascular age widget)
+    try {
+        personalInfo = await fetchJSON('/api/personal-info');
+    } catch (e) {
+        personalInfo = {};
+    }
 
     // Get date range from DB
     const range = await fetchJSON('/api/date-range');
