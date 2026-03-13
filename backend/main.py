@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, Query, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -33,6 +34,7 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 # Track background sync
 _sync_running = False
+_scheduler_task: asyncio.Task | None = None
 
 
 def _default_range(start: str | None, end: str | None) -> tuple[str, str]:
@@ -44,7 +46,7 @@ def _default_range(start: str | None, end: str | None) -> tuple[str, str]:
     return start, end
 
 
-# ── Startup ──────────────────────────────────────────────────────────────────
+# ── Startup & Scheduler ─────────────────────────────────────────────────────
 
 @app.on_event("startup")
 async def startup():
@@ -59,9 +61,8 @@ async def startup():
             db.import_from_json(data_dir)
             print("Import complete.")
 
-    # Run background sync
-    loop = asyncio.get_running_loop()
-    loop.run_in_executor(None, _background_sync)
+    # Start periodic sync scheduler
+    _start_scheduler()
 
 
 def _background_sync():
@@ -73,6 +74,36 @@ def _background_sync():
         print(f"Sync finished: {result}")
     finally:
         _sync_running = False
+
+
+def _get_sync_interval() -> int:
+    """Return sync interval in minutes from settings (0 = disabled)."""
+    val = db.get_setting("sync_interval", "360")  # default 6h
+    return int(val)
+
+
+async def _sync_scheduler():
+    """Periodically run sync based on configured interval."""
+    # Run one initial sync on startup
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _background_sync)
+
+    while True:
+        interval = _get_sync_interval()
+        if interval <= 0:
+            # Disabled — check again in 60s whether it's been re-enabled
+            await asyncio.sleep(60)
+            continue
+        await asyncio.sleep(interval * 60)
+        if not _sync_running:
+            await loop.run_in_executor(None, _background_sync)
+
+
+def _start_scheduler():
+    global _scheduler_task
+    if _scheduler_task and not _scheduler_task.done():
+        _scheduler_task.cancel()
+    _scheduler_task = asyncio.create_task(_sync_scheduler())
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -239,3 +270,20 @@ async def sync_status():
         "running": _sync_running,
         "last_sync": status,
     }
+
+
+@app.get("/api/sync/interval")
+async def get_sync_interval():
+    val = db.get_setting("sync_interval", "360")
+    return {"interval": int(val)}
+
+
+class SyncIntervalBody(BaseModel):
+    interval: int
+
+
+@app.post("/api/sync/interval")
+async def set_sync_interval(body: SyncIntervalBody):
+    db.set_setting("sync_interval", str(body.interval))
+    _start_scheduler()
+    return {"interval": body.interval}

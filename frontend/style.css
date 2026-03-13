@@ -110,6 +110,20 @@ h1 {
     border-color: var(--border-hover);
 }
 
+select.btn {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+}
+
+select.btn option {
+    background: var(--bg-card);
+    color: var(--text);
+}
+
 .btn-primary {
     background: #3b82f6;
     border-color: #3b82f6;

@@ -116,6 +116,11 @@ def init_db():
         );
         CREATE INDEX IF NOT EXISTS idx_hr_day ON heartrate(substr(timestamp, 1, 10));
 
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS sync_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             started_at TEXT,
@@ -491,6 +496,20 @@ def get_data_days() -> list[dict]:
     """).fetchall()
     conn.close()
     return _rows_to_dicts(rows)
+
+
+def get_setting(key: str, default: str | None = None) -> str | None:
+    conn = get_conn()
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    return row["value"] if row else default
+
+
+def set_setting(key: str, value: str):
+    conn = get_conn()
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+    conn.commit()
+    conn.close()
 
 
 def get_latest_day(table: str) -> str | None:

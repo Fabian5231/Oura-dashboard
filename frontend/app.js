@@ -386,6 +386,21 @@ async function triggerSync() {
     }, 2000);
 }
 
+async function loadSyncInterval() {
+    try {
+        const data = await fetchJSON('/api/sync/interval');
+        document.getElementById('syncInterval').value = String(data.interval);
+    } catch (e) {}
+}
+
+async function setSyncInterval(val) {
+    await fetchJSON('/api/sync/interval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interval: parseInt(val) }),
+    }).catch(() => {});
+}
+
 // ── Score Cards ─────────────────────────────────────────────────────────────
 async function buildScoreCards() {
     const scores = await fetchJSON(`/api/scores${qs(currentStart, currentEnd)}`);
@@ -1126,6 +1141,7 @@ async function init() {
     buildWidgetToggles();
     buildWidgetGrid();
     loadAllWidgets();
+    loadSyncInterval();
 }
 
 init();
