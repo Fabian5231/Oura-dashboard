@@ -125,7 +125,7 @@ h1 {
     border-radius: 8px;
     font-size: 0.82rem;
     cursor: pointer;
-    transition: border-color 0.2s;
+    transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
 }
 
 .date-range-picker input[type="date"]:focus {
@@ -155,7 +155,7 @@ h1 {
     border-radius: 8px;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
 }
 
 .btn:hover {
@@ -207,7 +207,7 @@ select.btn option {
     border-radius: 8px;
     font-size: 1rem;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
     line-height: 1;
 }
 
@@ -258,7 +258,7 @@ select.btn option {
     padding: 14px 10px;
     text-align: center;
     border: 1px solid var(--border);
-    transition: transform 0.2s;
+    transition: transform 0.2s, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
 }
 
 .score-card:hover { transform: translateY(-2px); }
@@ -288,7 +288,7 @@ select.btn option {
     padding: 20px;
     border: 1px solid var(--border);
     position: relative;
-    transition: opacity 0.3s, transform 0.3s, background 0.3s;
+    transition: opacity 0.3s, transform 0.3s, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
     display: flex;
     flex-direction: column;
 }
@@ -324,7 +324,7 @@ select.btn option {
     padding: 4px;
     line-height: 1;
     user-select: none;
-    transition: color 0.2s;
+    transition: color 0.4s ease;
 }
 
 .drag-handle:hover { color: var(--text-muted); }
@@ -365,7 +365,7 @@ select.btn option {
     color: var(--text-subtle);
     font-size: 0.85rem;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 0.4s ease, color 0.4s ease;
 }
 
 .size-popup-item:hover {
@@ -389,7 +389,7 @@ select.btn option {
     border-left: 1px solid var(--border);
     padding: 24px;
     z-index: 1000;
-    transition: right 0.3s ease;
+    transition: right 0.3s ease, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
     overflow-y: auto;
 }
 
