@@ -183,10 +183,8 @@ function setWidgetSize(widgetId, size) {
             popup.querySelector('.check-normal').textContent = size === 'full' ? '' : '\u2713';
             popup.querySelector('.check-full').textContent = size === 'full' ? '\u2713' : '';
         }
-        // Re-render chart to fit new size
-        if (chartInstances[widgetId]) {
-            chartInstances[widgetId].resize();
-        }
+        // Re-render chart with correct DPI for new size
+        loadWidget(widgetId);
     }
     closeSizePopups();
 }
