@@ -53,7 +53,7 @@ const GLOSSARY = {
     'Erholung': 'Perioden hoher Erholung \u2013 das parasympathische Nervensystem dominiert. K\u00f6rper und Geist regenerieren sich.',
     'Kalorien': 'Energieverbrauch in kcal. Aktive Kalorien = durch Bewegung verbrannt. Gesamt = Grundumsatz + aktive Kalorien.',
     'Schritte': 'T\u00e4gliche Schrittzahl. Die WHO empfiehlt 7.000\u201310.000 Schritte pro Tag f\u00fcr die Gesundheit.',
-    'Herzfrequenz': 'Herzschl\u00e4ge pro Minute (bpm). Die 24-Stunden-Kurve zeigt Ruhe-, Wach- und Aktivit\u00e4tsphasen im Tagesverlauf.',
+    'Herzfrequenz': 'Herzschl\u00e4ge pro Minute (bpm). Einzeltag: 24h-Verlauf. Mehrtage: t\u00e4gliche Min/Durchschnitt/Max-Werte.',
 };
 
 function tip(term, display) {

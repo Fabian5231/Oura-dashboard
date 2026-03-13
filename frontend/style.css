@@ -422,7 +422,7 @@ select.btn option {
     color: var(--text-muted);
 }
 
-.sleep-legend span::before {
+.sleep-legend > span::before {
     content: '';
     display: inline-block;
     width: 10px;
