@@ -15,8 +15,8 @@ function toggleTheme() {
     const next = getTheme() === 'dark' ? 'light' : 'dark';
     localStorage.setItem('oura_theme', next);
     applyTheme(next);
-    // Re-render all charts with new theme colors
-    loadAllWidgets();
+    // Re-render charts after theme transition finishes
+    setTimeout(() => loadAllWidgets(), 450);
 }
 
 // Apply theme immediately (before content loads)
