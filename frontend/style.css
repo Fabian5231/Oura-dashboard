@@ -67,31 +67,79 @@ h1 {
     -webkit-text-fill-color: transparent;
 }
 
-.header-controls {
+/* ── Toolbar ──────────────────────────────────────────────── */
+.toolbar {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 24px;
     flex-wrap: wrap;
-}
-
-.header-controls input[type="date"] {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    cursor: pointer;
+    border-radius: 14px;
+    padding: 12px 20px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.header-controls input[type="date"]::-webkit-calendar-picker-indicator {
+.toolbar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    font-weight: 500;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.date-range-picker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.date-range-picker input[type="date"] {
+    background: var(--bg-card-deep);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.date-range-picker input[type="date"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.date-range-picker input[type="date"]::-webkit-calendar-picker-indicator {
     filter: var(--cal-invert);
 }
 
 .date-separator {
     color: var(--text-faint);
+    font-size: 0.9rem;
+}
+
+.btn-row {
+    display: flex;
+    gap: 6px;
 }
 
 .btn {
@@ -490,6 +538,9 @@ select.btn option {
     .score-cards { grid-template-columns: repeat(2, 1fr); }
     body { padding: 10px; }
     .widget-panel { width: 260px; }
+    .toolbar { padding: 10px 12px; gap: 10px; }
+    .toolbar-divider { display: none; }
+    .toolbar-label { display: none; }
 }
 
 /* ── Loading spinner ───────────────────────────────────────── */

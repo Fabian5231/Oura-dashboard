@@ -14,23 +14,45 @@
 
 <h1>Oura Ring Dashboard</h1>
 
-<div class="header-controls">
-    <input type="date" id="startDate">
-    <span class="date-separator">–</span>
-    <input type="date" id="endDate">
-    <button class="btn" id="btnYesterday" onclick="setYesterday()">Gestern</button>
-    <button class="btn" id="btnAll" onclick="setAllTime()">Alles</button>
-    <button class="btn btn-sync" id="syncBtn" onclick="triggerSync()">Sync</button>
-    <select class="btn" id="syncInterval" onchange="setSyncInterval(this.value)" title="Auto-Sync Intervall">
-        <option value="0">Sync aus</option>
-        <option value="60">1 Std</option>
-        <option value="180">3 Std</option>
-        <option value="360" selected>6 Std</option>
-        <option value="720">12 Std</option>
-        <option value="1440">24 Std</option>
-    </select>
-    <button class="btn" id="widgetBtn" onclick="toggleWidgetPanel()">Widgets</button>
-    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" title="Light/Dark Mode">🌙</button>
+<div class="toolbar">
+    <div class="toolbar-group">
+        <label class="toolbar-label">Zeitraum</label>
+        <div class="date-range-picker">
+            <input type="date" id="startDate">
+            <span class="date-separator">–</span>
+            <input type="date" id="endDate">
+        </div>
+    </div>
+    <div class="toolbar-divider"></div>
+    <div class="toolbar-group">
+        <label class="toolbar-label">Schnellwahl</label>
+        <div class="btn-row">
+            <button class="btn" id="btnYesterday" onclick="setYesterday()">Gestern</button>
+            <button class="btn" id="btnAll" onclick="setAllTime()">Alles</button>
+        </div>
+    </div>
+    <div class="toolbar-divider"></div>
+    <div class="toolbar-group">
+        <label class="toolbar-label">Sync</label>
+        <div class="btn-row">
+            <button class="btn btn-sync" id="syncBtn" onclick="triggerSync()">Sync</button>
+            <select class="btn" id="syncInterval" onchange="setSyncInterval(this.value)" title="Auto-Sync Intervall">
+                <option value="0">Aus</option>
+                <option value="60">1h</option>
+                <option value="180">3h</option>
+                <option value="360" selected>6h</option>
+                <option value="720">12h</option>
+                <option value="1440">24h</option>
+            </select>
+        </div>
+    </div>
+    <div class="toolbar-divider"></div>
+    <div class="toolbar-group">
+        <div class="btn-row">
+            <button class="btn" id="widgetBtn" onclick="toggleWidgetPanel()">Widgets</button>
+            <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" title="Light/Dark Mode"></button>
+        </div>
+    </div>
 </div>
 
 <div class="subtitle" id="subtitle"></div>
