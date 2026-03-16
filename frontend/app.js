@@ -34,6 +34,7 @@ const sec2min = s => Math.round(s / 60);
 
 async function fetchJSON(url, opts) {
     const resp = await fetch(url, opts);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     return resp.json();
 }
 
@@ -782,7 +783,7 @@ async function buildSpo2() {
 }
 
 async function buildCvAge() {
-    const data = await fetchJSON('/api/cardiovascular-age');
+    const data = await fetchJSON(`/api/cardiovascular-age${qs(currentStart, currentEnd)}`);
     const realAge = personalInfo.age || 24;
 
     if (isSingleDay()) {
@@ -1113,6 +1114,17 @@ async function loadWidget(widgetId) {
         if (chart) chartInstances[widgetId] = chart;
     } catch (err) {
         console.error(`Error loading widget ${widgetId}:`, err);
+        if (BUILDERS[widgetId]?.noChart) {
+            const el = document.getElementById('content_' + widgetId);
+            if (el) el.innerHTML = '<div class="loading">Fehler beim Laden</div>';
+        } else {
+            const canvas = document.getElementById(widgetId);
+            if (canvas) {
+                const container = canvas.parentNode;
+                container.querySelector('.no-data-msg')?.remove();
+                container.insertAdjacentHTML('afterbegin', '<div class="loading no-data-msg">Fehler beim Laden</div>');
+            }
+        }
     }
 }
 

@@ -1,10 +1,13 @@
 """FastAPI backend for the Oura Ring Dashboard."""
 
 import asyncio
+import re
+import threading
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, Query, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -14,31 +17,21 @@ from starlette.requests import Request
 from . import database as db
 from . import oura_sync
 
-app = FastAPI(title="Oura Dashboard")
-
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-
-
-# Disable caching for static files during development
-class NoCacheStaticMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        if request.url.path.startswith("/static"):
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        return response
-
-app.add_middleware(NoCacheStaticMiddleware)
-
-# Serve static frontend files
-app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 # Track background sync
 _sync_running = False
+_sync_lock = threading.Lock()
 _scheduler_task: asyncio.Task | None = None
+
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _default_range(start: str | None, end: str | None) -> tuple[str, str]:
-    """Default to last 30 days if not specified."""
+    """Default to last 30 days if not specified. Validates date format."""
+    for d in (start, end):
+        if d is not None and not _DATE_RE.match(d):
+            raise HTTPException(status_code=400, detail=f"Ung\u00fcltiges Datum: {d}")
     if not end:
         end = datetime.now().strftime("%Y-%m-%d")
     if not start:
@@ -48,32 +41,19 @@ def _default_range(start: str | None, end: str | None) -> tuple[str, str]:
 
 # ── Startup & Scheduler ─────────────────────────────────────────────────────
 
-@app.on_event("startup")
-async def startup():
-    db.init_db()
-
-    # Import existing JSON data if DB is empty
-    date_range = db.get_date_range()
-    if date_range["min_day"] is None:
-        data_dir = Path(__file__).resolve().parent.parent / "oura_data"
-        if data_dir.exists():
-            print("Importing existing JSON data into SQLite...")
-            db.import_from_json(data_dir)
-            print("Import complete.")
-
-    # Start periodic sync scheduler
-    _start_scheduler()
-
-
 def _background_sync():
     global _sync_running
-    _sync_running = True
+    with _sync_lock:
+        if _sync_running:
+            return
+        _sync_running = True
     try:
         print("Starting background sync...")
         result = oura_sync.run_sync()
         print(f"Sync finished: {result}")
     finally:
-        _sync_running = False
+        with _sync_lock:
+            _sync_running = False
 
 
 def _get_sync_interval() -> int:
@@ -104,6 +84,44 @@ def _start_scheduler():
     if _scheduler_task and not _scheduler_task.done():
         _scheduler_task.cancel()
     _scheduler_task = asyncio.create_task(_sync_scheduler())
+
+
+@asynccontextmanager
+async def lifespan(app):
+    db.init_db()
+
+    # Import existing JSON data if DB is empty
+    date_range = db.get_date_range()
+    if date_range["min_day"] is None:
+        data_dir = FRONTEND_DIR.parent / "oura_data"
+        if data_dir.exists():
+            print("Importing existing JSON data into SQLite...")
+            db.import_from_json(data_dir)
+            print("Import complete.")
+
+    # Start periodic sync scheduler
+    _start_scheduler()
+    yield
+    # Shutdown: cancel scheduler
+    if _scheduler_task and not _scheduler_task.done():
+        _scheduler_task.cancel()
+
+
+app = FastAPI(title="Oura Dashboard", lifespan=lifespan)
+
+
+# Disable caching for static files during development
+class NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/static"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
+app.add_middleware(NoCacheStaticMiddleware)
+
+# Serve static frontend files
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -202,8 +220,11 @@ async def spo2(
 
 
 @app.get("/api/cardiovascular-age")
-async def cardiovascular_age():
-    return db.get_cardiovascular_age()
+async def cardiovascular_age(
+    start: str | None = Query(None),
+    end: str | None = Query(None),
+):
+    return db.get_cardiovascular_age(start, end)
 
 
 @app.get("/api/calories")
@@ -226,6 +247,8 @@ async def sleep_efficiency(
 
 @app.get("/api/heartrate")
 async def heartrate(date: str | None = Query(None)):
+    if date and not _DATE_RE.match(date):
+        raise HTTPException(status_code=400, detail=f"Ung\u00fcltiges Datum: {date}")
     if not date:
         # Default to most recent day with HR data
         ts = db.get_latest_heartrate_timestamp()
@@ -244,28 +267,32 @@ async def heartrate_daily(
 
 @app.post("/api/sync")
 async def trigger_sync(background_tasks: BackgroundTasks):
-    global _sync_running
-    if _sync_running:
-        return {"status": "already_running"}
+    with _sync_lock:
+        if _sync_running:
+            return {"status": "already_running"}
     background_tasks.add_task(_background_sync)
     return {"status": "started"}
 
 
 @app.post("/api/sync/full")
 async def trigger_full_sync(background_tasks: BackgroundTasks):
-    global _sync_running
-    if _sync_running:
-        return {"status": "already_running"}
+    with _sync_lock:
+        if _sync_running:
+            return {"status": "already_running"}
 
     def _bg():
         global _sync_running
-        _sync_running = True
+        with _sync_lock:
+            if _sync_running:
+                return
+            _sync_running = True
         try:
             print("Starting FULL sync...")
             result = oura_sync.run_full_sync()
             print(f"Full sync finished: {result}")
         finally:
-            _sync_running = False
+            with _sync_lock:
+                _sync_running = False
 
     background_tasks.add_task(_bg)
     return {"status": "started"}
@@ -273,7 +300,6 @@ async def trigger_full_sync(background_tasks: BackgroundTasks):
 
 @app.get("/api/sync/status")
 async def sync_status():
-    global _sync_running
     status = oura_sync.get_sync_status()
     return {
         "running": _sync_running,

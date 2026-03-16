@@ -183,13 +183,30 @@ def run_sync() -> dict:
         # Sync dated endpoints
         for ep in SYNC_ENDPOINTS:
             start_date = _compute_start_date(ep["name"])
-            print(f"  Syncing {ep['name']} from {start_date}...")
-            records = _fetch_paginated(ep, start_date, end_date)
-            if records:
-                upsert_fn = UPSERT_MAP[ep["name"]]
-                upsert_fn(records)
-                total_records += len(records)
-                print(f"    -> {len(records)} records")
+
+            if ep["name"] == "heartrate":
+                # Heartrate API only supports ~30 day ranges, fetch in chunks
+                chunk_start = datetime.strptime(start_date, "%Y-%m-%d")
+                chunk_end_max = datetime.strptime(end_date, "%Y-%m-%d")
+                while chunk_start < chunk_end_max:
+                    chunk_end = min(chunk_start + timedelta(days=29), chunk_end_max)
+                    cs = chunk_start.strftime("%Y-%m-%d")
+                    ce = chunk_end.strftime("%Y-%m-%d")
+                    print(f"  Syncing heartrate {cs} to {ce}...")
+                    records = _fetch_paginated(ep, cs, ce)
+                    if records:
+                        UPSERT_MAP[ep["name"]](records)
+                        total_records += len(records)
+                        print(f"    -> {len(records)} records")
+                    chunk_start = chunk_end + timedelta(days=1)
+            else:
+                print(f"  Syncing {ep['name']} from {start_date}...")
+                records = _fetch_paginated(ep, start_date, end_date)
+                if records:
+                    upsert_fn = UPSERT_MAP[ep["name"]]
+                    upsert_fn(records)
+                    total_records += len(records)
+                    print(f"    -> {len(records)} records")
 
         # Update log
         conn = db.get_conn()
