@@ -117,7 +117,7 @@ const WIDGETS = [
     { id: 'spo2',         label: 'SpO2',                  fullWidth: false, hideSingleDay: true },
     { id: 'cvAge',        label: 'Kardiovaskul\u00e4res Alter', fullWidth: false },
     { id: 'calories',     label: 'Kalorien',              fullWidth: false },
-    { id: 'sleepEff',     label: 'Schlaf-Effizienz',      fullWidth: false },
+    { id: 'sleepEff',     label: 'Schlaf-Effizienz',      fullWidth: false, hideSingleDay: true },
     { id: 'hr24',         label: 'Herzfrequenz',           fullWidth: true  },
     { id: 'resilience',   label: 'Resilienz',             fullWidth: false, hideSingleDay: true },
 ];
