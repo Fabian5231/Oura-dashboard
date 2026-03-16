@@ -381,11 +381,7 @@ function setYesterday() {
 }
 
 function toggleDayPicker() {
-    if (activeFilter === 'day') {
-        setAllTime();
-    } else {
-        document.getElementById('dayPicker').showPicker();
-    }
+    document.getElementById('dayPicker').showPicker();
 }
 
 function pickDay(val) {
