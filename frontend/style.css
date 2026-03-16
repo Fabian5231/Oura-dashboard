@@ -147,6 +147,20 @@ h1 {
     gap: 6px;
 }
 
+.day-picker-wrap {
+    position: relative;
+}
+
+.day-picker-wrap input[type="date"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
 .btn {
     background: var(--bg-card);
     border: 1px solid var(--border);

@@ -25,6 +25,10 @@
         <label class="toolbar-label">Schnellwahl</label>
         <div class="btn-row">
             <button class="btn" id="btnYesterday" onclick="setYesterday()">Gestern</button>
+            <div class="day-picker-wrap">
+                <button class="btn" id="btnDay" onclick="document.getElementById('dayPicker').showPicker()">Tag</button>
+                <input type="date" id="dayPicker" onchange="pickDay(this.value)">
+            </div>
             <button class="btn" id="btnAll" onclick="setAllTime()">Alles</button>
         </div>
     </div>

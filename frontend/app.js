@@ -354,13 +354,12 @@ function qs(start, end) {
     return `?start=${start}&end=${end}`;
 }
 
-let activeFilter = null; // 'yesterday' | 'all' | null
+let activeFilter = null; // 'yesterday' | 'day' | 'all' | null
 
 function updateFilterButtons() {
-    const btnYesterday = document.getElementById('btnYesterday');
-    const btnAll = document.getElementById('btnAll');
-    btnYesterday.classList.toggle('btn-active', activeFilter === 'yesterday');
-    btnAll.classList.toggle('btn-active', activeFilter === 'all');
+    document.getElementById('btnYesterday').classList.toggle('btn-active', activeFilter === 'yesterday');
+    document.getElementById('btnDay').classList.toggle('btn-active', activeFilter === 'day');
+    document.getElementById('btnAll').classList.toggle('btn-active', activeFilter === 'all');
 }
 
 function setDateRange(start, end, filter = null) {
@@ -379,6 +378,10 @@ function setYesterday() {
     d.setDate(d.getDate() - 1);
     const yesterday = d.toISOString().slice(0, 10);
     setDateRange(yesterday, yesterday, 'yesterday');
+}
+
+function pickDay(val) {
+    if (val) setDateRange(val, val, 'day');
 }
 
 function setAllTime() {
