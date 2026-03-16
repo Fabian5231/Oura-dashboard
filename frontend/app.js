@@ -1031,7 +1031,28 @@ async function loadWidget(widgetId) {
 
     try {
         const config = await builder.build();
-        if (!config) return;
+
+        // No data: clear old chart and show message
+        if (!config) {
+            if (chartInstances[widgetId] && chartInstances[widgetId] !== true) {
+                chartInstances[widgetId].destroy();
+            }
+            delete chartInstances[widgetId];
+            if (builder.noChart) {
+                const contentEl = document.getElementById('content_' + widgetId);
+                if (contentEl) contentEl.innerHTML = '<div class="loading">Keine Daten f\u00fcr diesen Zeitraum</div>';
+            } else {
+                const oldCanvas = document.getElementById(widgetId);
+                if (oldCanvas) {
+                    const container = oldCanvas.parentNode;
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.id = widgetId;
+                    container.replaceChild(newCanvas, oldCanvas);
+                    container.insertAdjacentHTML('afterbegin', '<div class="loading no-data-msg">Keine Daten f\u00fcr diesen Zeitraum</div>');
+                }
+            }
+            return;
+        }
 
         // Non-chart widgets
         if (builder.noChart) {
@@ -1048,6 +1069,11 @@ async function loadWidget(widgetId) {
         }
 
         // Replace canvas to ensure clean state (needed for type switches like line→doughnut)
+        const container = document.getElementById(widgetId)?.parentNode;
+        if (container) {
+            // Remove any "no data" message
+            container.querySelector('.no-data-msg')?.remove();
+        }
         const oldCanvas = document.getElementById(widgetId);
         if (oldCanvas) {
             const newCanvas = document.createElement('canvas');
