@@ -380,6 +380,14 @@ function setYesterday() {
     setDateRange(yesterday, yesterday, 'yesterday');
 }
 
+function toggleDayPicker() {
+    if (activeFilter === 'day') {
+        setAllTime();
+    } else {
+        document.getElementById('dayPicker').showPicker();
+    }
+}
+
 function pickDay(val) {
     if (val) setDateRange(val, val, 'day');
 }
