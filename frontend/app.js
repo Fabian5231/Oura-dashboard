@@ -113,13 +113,13 @@ const WIDGETS = [
     { id: 'sleepStages',  label: 'Schlaf-Phasen',         fullWidth: false },
     { id: 'hrHrv',        label: 'Ruhe-HF & HRV',        fullWidth: false },
     { id: 'steps',        label: 'Schritte',              fullWidth: false },
-    { id: 'stress',       label: 'Stress vs. Erholung',   fullWidth: false },
-    { id: 'spo2',         label: 'SpO2',                  fullWidth: false },
+    { id: 'stress',       label: 'Stress vs. Erholung',   fullWidth: false, hideSingleDay: true },
+    { id: 'spo2',         label: 'SpO2',                  fullWidth: false, hideSingleDay: true },
     { id: 'cvAge',        label: 'Kardiovaskul\u00e4res Alter', fullWidth: false },
     { id: 'calories',     label: 'Kalorien',              fullWidth: false },
     { id: 'sleepEff',     label: 'Schlaf-Effizienz',      fullWidth: false },
     { id: 'hr24',         label: 'Herzfrequenz',           fullWidth: true  },
-    { id: 'resilience',   label: 'Resilienz',             fullWidth: false },
+    { id: 'resilience',   label: 'Resilienz',             fullWidth: false, hideSingleDay: true },
 ];
 
 // Track chart instances for cleanup
@@ -206,12 +206,33 @@ function buildWidgetToggles() {
     const vis = getVisibility();
     const container = document.getElementById('widgetToggles');
     container.innerHTML = WIDGETS.map(w => `
-        <div class="widget-toggle">
+        <div class="widget-toggle" id="wt_${w.id}">
             <input type="checkbox" id="toggle_${w.id}" ${vis[w.id] ? 'checked' : ''}
                    onchange="onWidgetToggle('${w.id}', this.checked)">
             <label for="toggle_${w.id}">${w.label}</label>
+            ${w.hideSingleDay ? '<span class="wt-unavailable" style="display:none;">Tagesansicht nicht verf\u00fcgbar</span>' : ''}
         </div>
     `).join('');
+}
+
+function updateWidgetToggles() {
+    const single = isSingleDay();
+    WIDGETS.forEach(w => {
+        if (!w.hideSingleDay) return;
+        const toggle = document.getElementById('wt_' + w.id);
+        if (!toggle) return;
+        const cb = toggle.querySelector('input');
+        const hint = toggle.querySelector('.wt-unavailable');
+        if (single) {
+            cb.disabled = true;
+            cb.checked = false;
+            if (hint) hint.style.display = '';
+        } else {
+            cb.disabled = false;
+            cb.checked = getVisibility()[w.id] || false;
+            if (hint) hint.style.display = 'none';
+        }
+    });
 }
 
 function toggleAllWidgets(on) {
@@ -1124,13 +1145,29 @@ function buildWidgetGrid() {
 // ── Load all visible widgets ────────────────────────────────────────────────
 async function loadAllWidgets() {
     const vis = getVisibility();
+    const single = isSingleDay();
     const promises = [];
 
     WIDGETS.forEach(w => {
+        const box = document.getElementById('box_' + w.id);
+        if (!box) return;
+
+        // Hide widgets that are not available in single-day mode
+        if (w.hideSingleDay && single) {
+            box.classList.add('hidden');
+            return;
+        }
+
+        // Restore visibility based on user setting
+        box.classList.toggle('hidden', !vis[w.id]);
+
         if (vis[w.id]) {
             promises.push(loadWidget(w.id));
         }
     });
+
+    // Update widget panel toggles
+    updateWidgetToggles();
 
     await Promise.all(promises);
 }
